@@ -59,6 +59,7 @@ async def generate_embedding(text: str, model: str = "text-embedding-3-small") -
 
 async def create_content_with_embedding(
     url: Optional[str] = None,
+    file_path: Optional[str] = None,
     extracted_text: Optional[str] = None,
     summary: Optional[str] = None,
     tags: Optional[List[str]] = None,
@@ -67,6 +68,7 @@ async def create_content_with_embedding(
     # Create content item first
     content_item = create_content_item(
         url=url,
+        file_path=file_path,
         extracted_text=extracted_text,
         summary=summary,
         tags=tags or [],

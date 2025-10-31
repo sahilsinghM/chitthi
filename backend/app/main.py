@@ -6,6 +6,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Optional: Setup Phoenix tracing if enabled
+try:
+    from app.evaluation.phoenix_setup import setup_phoenix_tracing
+    setup_phoenix_tracing()
+except ImportError:
+    pass  # Phoenix is optional
+
 app = FastAPI(
     title="Newsletter Engine API",
     description="AI-powered Hinglish Newsletter Engine",

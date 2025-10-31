@@ -43,5 +43,51 @@ async def initialize_database():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/verify-rpc")
+async def verify_rpc_function():
+    """Verify that match_content_embeddings RPC function is available"""
+    try:
+        from app.db.embeddings import generate_embedding
+        from app.db.client import get_supabase
+        
+        # Generate a test embedding
+        test_text = "test query for vector search"
+        test_embedding = await generate_embedding(test_text)
+        
+        supabase = get_supabase()
+        
+        try:
+            # Try to call the RPC function
+            result = supabase.rpc(
+                "match_content_embeddings",
+                {
+                    "query_embedding": test_embedding,
+                    "match_threshold": 0.0,
+                    "match_count": 1,
+                }
+            ).execute()
+            
+            return {
+                "status": "success",
+                "rpc_function": "match_content_embeddings",
+                "available": True,
+                "message": "RPC function is deployed and working",
+                "note": "This confirms the vector search function is properly set up"
+            }
+        except Exception as rpc_error:
+            return {
+                "status": "warning",
+                "rpc_function": "match_content_embeddings",
+                "available": False,
+                "message": f"RPC function not available: {str(rpc_error)}",
+                "action_required": "Run supabase/functions/match_content_embeddings.sql in Supabase SQL Editor"
+            }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e),
+            "available": False
+        }
+
 
 

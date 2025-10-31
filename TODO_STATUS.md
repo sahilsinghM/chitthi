@@ -16,6 +16,18 @@
 - [x] Integrate Agno (Phidata) Agent Development Kit
 - [x] Set up testing infrastructure (pytest + Vitest)
 - [x] Set up LLM evaluation framework (Phoenix installed)
+- [x] Implement embedding generation and storage (vector search)
+- [x] Implement API usage tracking and cost estimation dashboard
+- [x] Enhanced topic prioritization with database integration
+- [x] Phoenix evaluation integration and test suite
+- [x] Model comparison UI (side-by-side comparison)
+- [x] Draft versioning UI (view/edit versions)
+- [x] Cost tracking dashboard
+- [x] Draft saving to database
+- [x] Vector search implementation for content discovery
+- [x] File upload support with embedding generation
+- [x] RPC function verification endpoint
+- [x] Complete embedding integration with content ingestion
 
 ## 🔄 In Progress
 
@@ -23,21 +35,19 @@
 
 ## ⏳ Pending
 
-- [ ] Implement embedding generation and storage (vector search)
-- [ ] Implement API usage tracking and cost estimation dashboard
-- [ ] Enhanced topic prioritization with database integration
-- [ ] Phoenix evaluation integration and test suite
-- [ ] Model comparison UI (side-by-side comparison)
-- [ ] Draft versioning UI (view/edit versions)
-- [ ] Cost tracking dashboard
-- [ ] Draft saving to database
-- [ ] Vector search implementation for content discovery
+- [ ] Enhanced file processing (PDF, markdown parsing)
+- [ ] Content deduplication
+- [ ] Advanced topic clustering algorithms
+- [ ] Newsletter analytics integration (Substack, Twitter)
 
 ## 📝 Notes
 
 - Supabase keys need to be in `backend/.env`
-- Run migration SQL in Supabase SQL Editor
+- Run migration SQL in Supabase SQL Editor: `supabase/migrations/001_init_schema.sql`
+- Run RPC function: `supabase/functions/match_content_embeddings.sql`
 - Backend must be running to test via API: `GET /api/db/test`
+- Verify RPC function: `GET /api/db/verify-rpc`
+- Phoenix tracing: Set `PHOENIX_HOST` environment variable to enable (optional)
 
 
 
