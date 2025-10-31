@@ -1,11 +1,23 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from typing import Optional, List
-from app.agents.content_agent import ContentAgent
 from app.db.embeddings import create_content_with_embedding
 
 router = APIRouter()
-content_agent = ContentAgent()
+
+# Lazy load ContentAgent to avoid import errors at startup
+def get_content_agent():
+    """Get ContentAgent instance, creating if needed"""
+    try:
+        from app.agents.content_agent import ContentAgent
+        if not hasattr(get_content_agent, '_instance'):
+            get_content_agent._instance = ContentAgent()
+        return get_content_agent._instance
+    except ImportError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"ContentAgent not available. Please install phidata: {str(e)}"
+        )
 
 class IngestContentRequest(BaseModel):
     url: Optional[str] = None
@@ -23,6 +35,7 @@ async def ingest_content(
     try:
         if url:
             # Use Agno ContentAgent to extract content
+            content_agent = get_content_agent()
             result = await content_agent.ingest_url(url, notes)
             
             # Ask clarifying questions
@@ -62,12 +75,15 @@ async def ingest_content(
                 file_content = await file.read()
                 file_text = file_content.decode('utf-8')
                 
-                # Use ContentAgent to process file
-                result = await content_agent.ingest_url(None, notes)  # Pass file content as notes
-                
                 # For now, treat file content as extracted text
+                # In the future, we can use ContentAgent to process file content better
                 extracted_text = file_text[:5000]  # Limit size
-                summary = result.get("summary") if result.get("summary") else extracted_text[:500]
+                summary = extracted_text[:500]  # Simple summary from first 500 chars
+                
+                # If notes provided, use them to guide summary
+                if notes:
+                    # Could enhance this with AI summary generation
+                    summary = f"{summary}\n\nUser notes: {notes}"
                 
                 # Store in Supabase with embedding
                 try:

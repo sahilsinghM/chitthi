@@ -15,7 +15,7 @@ anthropic==0.7.8
 httpx>=0.24.0,<0.25.0
 
 # Agno Agent Framework  
-phidata[openai,anthropic,postgres]>=2.7.0
+phidata>=2.7.0
 
 # Content processing
 readability-lxml>=0.8.1

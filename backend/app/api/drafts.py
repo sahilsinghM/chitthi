@@ -3,11 +3,22 @@ from pydantic import BaseModel
 from typing import Optional, List
 from uuid import UUID
 from app.models.registry import ModelRegistry
-from app.agents.draft_agent import DraftAgent
 from app.db.drafts import get_draft, list_drafts, create_draft_version
 
 router = APIRouter()
 registry = ModelRegistry()
+
+# Lazy load DraftAgent to avoid import errors at startup
+def get_draft_agent(model_id: str):
+    """Get DraftAgent instance for given model"""
+    try:
+        from app.agents.draft_agent import DraftAgent
+        return DraftAgent(model_id=model_id, registry=registry)
+    except ImportError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"DraftAgent not available. Please install phidata: {str(e)}"
+        )
 
 class GenerateDraftRequest(BaseModel):
     topic_id: Optional[str] = None
@@ -35,7 +46,7 @@ async def generate_draft(request: GenerateDraftRequest):
         from app.db.drafts import create_draft
         
         # Use Agno DraftAgent for better orchestration
-        draft_agent = DraftAgent(model_id=request.model, registry=registry)
+        draft_agent = get_draft_agent(request.model)
         
         # Build context: use provided context or search knowledge base
         context = request.context

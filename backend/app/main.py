@@ -28,8 +28,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Import routers
-from app.api import models, content, drafts, topics, db, analytics
+# Import routers (lazy load those with agents)
+from app.api import models, db, analytics
+
+# Import routers that may have agent dependencies
+try:
+    from app.api import content, drafts, topics
+except ImportError as e:
+    # If agents fail to import, create placeholder routers
+    print(f"Warning: Some routers failed to load: {e}")
+    from fastapi import APIRouter
+    content = APIRouter()
+    drafts = APIRouter()
+    topics = APIRouter()
 
 app.include_router(models.router, prefix="/api/models", tags=["models"])
 app.include_router(content.router, prefix="/api/content", tags=["content"])

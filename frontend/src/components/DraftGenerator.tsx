@@ -75,9 +75,14 @@ export function DraftGenerator({ selectedModel }: DraftGeneratorProps) {
               </pre>
             </div>
             <div className="text-xs text-muted-foreground space-y-1">
-              <p>Model: {draft.draft.model} ({draft.draft.provider})</p>
-              <p>Tokens: {draft.metadata.tokens.total} (in: {draft.metadata.tokens.input}, out: {draft.metadata.tokens.output})</p>
-              <p>Estimated Cost: ${draft.metadata.estimated_cost.toFixed(6)}</p>
+              <p>Model: {draft.draft.model}</p>
+              {draft.draft.agent && <p>Agent: {draft.draft.agent}</p>}
+              {draft.metadata && draft.metadata.model_used && (
+                <p>Model Used: {draft.metadata.model_used}</p>
+              )}
+              {draft.metadata && draft.metadata.saved_to_db && (
+                <p className="text-green-600">✓ Saved to database</p>
+              )}
             </div>
           </div>
         )}

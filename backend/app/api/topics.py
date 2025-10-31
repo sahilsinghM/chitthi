@@ -1,12 +1,24 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional, Dict
-from app.agents.topic_agent import TopicAgent
 from app.db.client import get_supabase
 from app.db.embeddings import search_similar_content
 
 router = APIRouter()
-topic_agent = TopicAgent()
+
+# Lazy load TopicAgent to avoid import errors at startup
+def get_topic_agent():
+    """Get TopicAgent instance, creating if needed"""
+    try:
+        from app.agents.topic_agent import TopicAgent
+        if not hasattr(get_topic_agent, '_instance'):
+            get_topic_agent._instance = TopicAgent()
+        return get_topic_agent._instance
+    except ImportError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"TopicAgent not available. Please install phidata: {str(e)}"
+        )
 
 class PrioritizeTopicsRequest(BaseModel):
     content_items: Optional[List[Dict]] = None  # Optional: can query from DB
@@ -55,6 +67,7 @@ async def prioritize_topics(request: PrioritizeTopicsRequest):
                     item["related_content_count"] = 0
                 enhanced_items.append(item)
             
+            topic_agent = get_topic_agent()
             topics = await topic_agent.prioritize_topics(
                 content_items=enhanced_items,
                 interest_weights=request.interest_weights
