@@ -22,11 +22,14 @@ app.add_middleware(
 )
 
 # Import routers
-from app.api import models, content, drafts
+from app.api import models, content, drafts, topics, db, analytics
 
 app.include_router(models.router, prefix="/api/models", tags=["models"])
 app.include_router(content.router, prefix="/api/content", tags=["content"])
 app.include_router(drafts.router, prefix="/api/drafts", tags=["drafts"])
+app.include_router(topics.router, prefix="/api/topics", tags=["topics"])
+app.include_router(db.router, prefix="/api/db", tags=["database"])
+app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 
 @app.get("/")
 async def root():

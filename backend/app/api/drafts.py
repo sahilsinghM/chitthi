@@ -1,7 +1,10 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
+from uuid import UUID
 from app.models.registry import ModelRegistry
+from app.agents.draft_agent import DraftAgent
+from app.db.drafts import get_draft, list_drafts, create_draft_version
 
 router = APIRouter()
 registry = ModelRegistry()
@@ -20,55 +23,76 @@ class CompareModelsRequest(BaseModel):
     system_prompt: Optional[str] = None
     temperature: float = 0.7
 
+class CreateVersionRequest(BaseModel):
+    content: str
+    changes_summary: Optional[str] = None
+
 @router.post("/generate")
 async def generate_draft(request: GenerateDraftRequest):
-    """Generate newsletter draft using specified model"""
+    """Generate newsletter draft using Agno agent"""
     try:
-        # TODO: Build full prompt from topic context, knowledge base
-        # For now, using provided context
-        prompt = request.context or "Generate a Hinglish newsletter draft."
+        from app.db.embeddings import search_similar_content
+        from app.db.drafts import create_draft
         
-        # System prompt for Hinglish newsletter
-        system_prompt = request.system_prompt or """You are a newsletter writer creating content in Hinglish (English script with Hindi words mixed naturally).
+        # Use Agno DraftAgent for better orchestration
+        draft_agent = DraftAgent(model_id=request.model, registry=registry)
         
-Style guidelines:
-- English for logic and technical concepts
-- Hindi for emotion and cultural context
-- Sharp, witty, builder-energy tone
-- Target audience: Engineers, designers, founders, builders
-- Length: 500-800 words
-- Structure: Hook → Context → Insight → Takeaway → Closing
-
-Write naturally, mixing English and Hindi words seamlessly."""
+        # Build context: use provided context or search knowledge base
+        context = request.context
+        if not context and request.topic_id:
+            # TODO: Get topic details and related content from DB
+            context = "Generate a Hinglish newsletter draft on current trends for builders."
+        elif not context:
+            context = "Generate a Hinglish newsletter draft on current trends for builders."
+        else:
+            # If context provided, search for related content in knowledge base
+            try:
+                related_content = await search_similar_content(
+                    query_text=context,
+                    limit=5,
+                    threshold=0.6
+                )
+                if related_content:
+                    # Enhance context with related content
+                    summaries = [item.get("content_summary", "") for item in related_content if item.get("content_summary")]
+                    if summaries:
+                        context += "\n\nRelated insights from knowledge base:\n" + "\n".join(f"- {s}" for s in summaries[:3])
+            except Exception:
+                # If search fails, continue with original context
+                pass
         
-        response = await registry.generate(
-            prompt=prompt,
-            model_id=request.model,
-            system_prompt=system_prompt,
+        result = await draft_agent.generate(
+            context=context,
             temperature=request.temperature,
-            max_tokens=request.max_tokens,
-            use_fallback=True
+            max_tokens=request.max_tokens
         )
+        
+        # Save draft to database
+        try:
+            saved_draft = create_draft(
+                content=result["content"],
+                topic_id=request.topic_id,
+                title="",  # Extract from content later
+                model_used=result["model"],
+                status="draft"
+            )
+            draft_id = saved_draft.get("id")
+        except Exception as db_error:
+            draft_id = None
+            print(f"Draft save failed: {db_error}")
         
         return {
             "draft": {
-                "content": response.content,
-                "title": "",  # Extract from content or generate separately
-                "model": response.model,
-                "provider": response.provider,
+                "id": draft_id,
+                "content": result["content"],
+                "title": "",  # TODO: Extract from content
+                "model": result["model"],
+                "agent": result.get("agent", "DraftAgent"),
             },
             "metadata": {
-                "tokens": {
-                    "input": response.input_tokens,
-                    "output": response.output_tokens,
-                    "total": response.input_tokens + response.output_tokens
-                },
-                "estimated_cost": registry.estimate_cost(
-                    response.input_tokens,
-                    response.output_tokens,
-                    response.model
-                ),
-                "finish_reason": response.finish_reason,
+                "model_used": result["model"],
+                "agent_framework": "Agno",
+                "saved_to_db": draft_id is not None,
             }
         }
     except Exception as e:
@@ -118,6 +142,64 @@ async def compare_models(request: CompareModelsRequest):
             "comparison": results,
             "count": len(results)
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/list")
+async def list_all_drafts(status: Optional[str] = None, limit: int = 20):
+    """List all drafts, optionally filtered by status"""
+    try:
+        drafts = list_drafts(status=status, limit=limit)
+        return {
+            "drafts": drafts,
+            "count": len(drafts)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{draft_id}")
+async def get_draft_by_id(draft_id: str):
+    """Get a draft by ID"""
+    try:
+        draft = get_draft(UUID(draft_id))
+        if not draft:
+            raise HTTPException(status_code=404, detail="Draft not found")
+        return {"draft": draft}
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid draft ID format")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{draft_id}/versions")
+async def get_draft_versions(draft_id: str):
+    """Get all versions of a draft"""
+    try:
+        from app.db.client import get_supabase
+        supabase = get_supabase()
+        
+        result = supabase.table("draft_versions").select("*").eq(
+            "draft_id", draft_id
+        ).order("version_number", desc=True).execute()
+        
+        return {
+            "draft_id": draft_id,
+            "versions": result.data if result.data else []
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/{draft_id}/versions")
+async def create_new_version(draft_id: str, request: CreateVersionRequest):
+    """Create a new version of a draft"""
+    try:
+        version = create_draft_version(
+            draft_id=UUID(draft_id),
+            content=request.content,
+            changes_summary=request.changes_summary
+        )
+        return {"version": version}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

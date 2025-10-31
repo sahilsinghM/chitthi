@@ -76,6 +76,57 @@ export const api = {
         ...options
       })
       return response.data
+    },
+    list: async (status?: string, limit?: number) => {
+      const params = new URLSearchParams()
+      if (status) params.append('status', status)
+      if (limit) params.append('limit', limit.toString())
+      const response = await axios.get(`${API_BASE}/api/drafts/list?${params.toString()}`)
+      return response.data
+    },
+    get: async (draftId: string) => {
+      const response = await axios.get(`${API_BASE}/api/drafts/${draftId}`)
+      return response.data
+    },
+    getVersions: async (draftId: string) => {
+      const response = await axios.get(`${API_BASE}/api/drafts/${draftId}/versions`)
+      return response.data
+    },
+    createVersion: async (draftId: string, content: string, changesSummary?: string) => {
+      const response = await axios.post(`${API_BASE}/api/drafts/${draftId}/versions`, {
+        content,
+        changes_summary: changesSummary
+      })
+      return response.data
+    }
+  },
+  topics: {
+    prioritize: async (contentItems?: any[], interestWeights?: Record<string, number>, useDatabase?: boolean) => {
+      const response = await axios.post(`${API_BASE}/api/topics/prioritize`, {
+        content_items: contentItems,
+        interest_weights: interestWeights,
+        use_database: useDatabase ?? true
+      })
+      return response.data
+    },
+    list: async (limit?: number) => {
+      const params = new URLSearchParams()
+      if (limit) params.append('limit', limit.toString())
+      const response = await axios.get(`${API_BASE}/api/topics/list?${params.toString()}`)
+      return response.data
+    }
+  },
+  analytics: {
+    usage: async (provider?: string, days?: number) => {
+      const params = new URLSearchParams()
+      if (provider) params.append('provider', provider)
+      if (days) params.append('days', days.toString())
+      const response = await axios.get(`${API_BASE}/api/analytics/usage?${params.toString()}`)
+      return response.data
+    },
+    costs: async () => {
+      const response = await axios.get(`${API_BASE}/api/analytics/costs`)
+      return response.data
     }
   }
 }

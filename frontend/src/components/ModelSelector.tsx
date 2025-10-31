@@ -7,9 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 interface ModelSelectorProps {
   onModelChange: (modelId: string) => void
+  excludeModels?: string[]
+  placeholder?: string
 }
 
-export function ModelSelector({ onModelChange }: ModelSelectorProps) {
+export function ModelSelector({ onModelChange, excludeModels = [], placeholder = "Select a model" }: ModelSelectorProps) {
   const [models, setModels] = useState<ModelInfo[]>([])
   const [selectedModel, setSelectedModel] = useState<string>('')
   const [loading, setLoading] = useState(true)
@@ -51,10 +53,10 @@ export function ModelSelector({ onModelChange }: ModelSelectorProps) {
       <CardContent className="space-y-4">
         <Select value={selectedModel} onValueChange={handleModelChange}>
           <SelectTrigger>
-            <SelectValue placeholder="Select a model" />
+            <SelectValue placeholder={placeholder} />
           </SelectTrigger>
           <SelectContent>
-            {models.map((model) => (
+            {models.filter(model => !excludeModels.includes(model.id)).map((model) => (
               <SelectItem key={model.id} value={model.id}>
                 <div className="flex items-center justify-between w-full">
                   <span>{model.display_name}</span>

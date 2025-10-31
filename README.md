@@ -1,38 +1,36 @@
 # Newsletter Engine
 
-AI-powered Hinglish Newsletter Engine with multi-model support via OpenRouter.
+AI-powered Hinglish Newsletter Engine with multi-model support via OpenRouter, OpenAI, and Anthropic. Built with Agno (Phidata) Agent Development Kit.
 
-## Architecture
+## Quick Start
 
-- **Backend**: FastAPI (Python) with OpenRouter, OpenAI, and Anthropic model support
-- **Frontend**: Next.js 14 with TypeScript, Tailwind CSS, and shadcn/ui
-- **Database**: Supabase (PostgreSQL with pgvector) - to be configured
-- **Testing**: pytest (backend), Vitest (frontend)
-- **Evaluation**: Phoenix (Arize AI) for LLM evaluation
-
-## Setup
-
-### Backend Setup
+### 1. Backend Setup
 
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python3 -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-Create `.env` file:
+Create `.env` file in `backend/`:
 ```bash
-cp .env.example .env
-# Edit .env with your API keys
+# Required
+OPENROUTER_API_KEY=sk-or-v1-your-key-here
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_KEY=your-anon-key
+
+# Optional (for fallback)
+OPENAI_API_KEY=sk-your-key-here
+ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
 
 Run backend:
 ```bash
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --port 8000
 ```
 
-### Frontend Setup
+### 2. Frontend Setup
 
 ```bash
 cd frontend
@@ -40,96 +38,122 @@ npm install
 npm run dev
 ```
 
-Visit `http://localhost:3000`
+Visit: http://localhost:3000
 
-## API Keys Required
+## API Keys
 
-1. **OpenRouter** (Primary): Get from https://openrouter.ai
-2. **OpenAI** (Fallback): Optional, for direct OpenAI access
-3. **Anthropic** (Fallback): Optional, for direct Claude access
-4. **Supabase**: To be configured later
+**Required:** OpenRouter API key from https://openrouter.ai  
+**Optional:** OpenAI and Anthropic keys for direct fallback access
 
 ## Features
 
-- ✅ Multi-model support (OpenRouter, OpenAI, Anthropic)
-- ✅ Automatic fallback between providers
-- ✅ Cost tracking and estimation
-- ✅ Model comparison
-- ✅ Draft generation with Hinglish support
-- ✅ Testing infrastructure
-- ⏳ Content ingestion (in progress)
-- ⏳ Vector search with embeddings (in progress)
-- ⏳ Topic prioritization (in progress)
-- ⏳ Phoenix evaluation integration (in progress)
+✅ Multi-model support (OpenRouter, OpenAI, Anthropic)  
+✅ Agno agents for orchestration (Draft, Content, Topic agents)  
+✅ Automatic fallback between providers  
+✅ Cost tracking and estimation  
+✅ Draft generation with Hinglish support  
+✅ Content ingestion with website reading tools  
+✅ Topic prioritization with AI clustering  
+✅ Supabase database integration with pgvector  
+✅ Testing infrastructure
 
 ## Project Structure
 
 ```
 chitthi/
-├── backend/
+├── backend/          # FastAPI server
 │   ├── app/
-│   │   ├── api/          # API routes
-│   │   ├── models/       # Model providers
-│   │   └── config/       # Configuration files
-│   ├── tests/            # Test suite
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── app/          # Next.js pages
-│   │   ├── components/   # React components
-│   │   └── lib/          # Utilities
-│   └── package.json
+│   │   ├── api/      # API routes
+│   │   ├── agents/   # Agno agents (Draft, Content, Topic)
+│   │   ├── models/   # Model providers
+│   │   └── config/   # Config files
+│   └── tests/        # Test suite
+├── frontend/         # Next.js app
+│   └── src/
+│       ├── app/      # Pages
+│       ├── components/  # React components
+│       └── lib/      # Utilities
 └── README.md
 ```
 
 ## Development
 
-### Running Tests
-
-Backend:
+**Tests:**
 ```bash
-cd backend
-pytest
+# Backend
+cd backend && pytest
+
+# Frontend
+cd frontend && npm test
 ```
 
-Frontend:
+**GitHub:**
 ```bash
-cd frontend
-npm test
-```
-
-## Deployment
-
-### GitHub Setup
-
-1. Create a new repository on GitHub
-2. Push code:
-```bash
-git remote add origin https://github.com/yourusername/chitthi.git
-git branch -M main
+git remote add origin https://github.com/YOUR_USERNAME/chitthi.git
 git push -u origin main
 ```
 
-### Environment Variables
+## Supabase Setup
 
-Add these secrets to GitHub (Settings > Secrets):
-- `OPENROUTER_API_KEY` (required)
-- `OPENAI_API_KEY` (optional)
-- `ANTHROPIC_API_KEY` (optional)
+### Step 1: Get Credentials
+1. Go to Supabase Dashboard: https://supabase.com/dashboard/project/chitthi
+2. Settings → API
+3. Copy **Project URL** and **anon/public key**
 
-## Contributing
+### Step 2: Add to .env
+```bash
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_KEY=your-anon-key-here
+```
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests
-5. Submit a pull request
+### Step 3: Run Database Migration
+1. Supabase Dashboard → **SQL Editor** → **New Query**
+2. Copy entire file: `supabase/migrations/001_init_schema.sql`
+3. Paste and **Run**
+
+This creates:
+- ✅ 8 tables (content_items, embeddings, topics, drafts, versions, api_usage, analytics, model_configs)
+- ✅ pgvector extension for embeddings
+- ✅ Indexes and triggers
+
+### Step 4: (Optional) Vector Search Function
+Copy `supabase/functions/match_content_embeddings.sql` to SQL Editor and run for optimized vector search.
+
+### Step 5: Test Connection
+```bash
+# Via API (backend must be running)
+curl http://localhost:8000/api/db/test
+
+# Or Python
+cd backend && source venv/bin/activate
+python -c "from app.db.client import get_supabase; print('✅ Connected')"
+```
+
+### Database Schema
+
+**Tables:**
+- `content_items` - URLs, files, extracted text
+- `content_embeddings` - Vector embeddings (1536 dims, pgvector)
+- `topics` - Newsletter topics with priority scores
+- `drafts` - Newsletter drafts
+- `draft_versions` - Version history
+- `api_usage` - Cost tracking
+- `model_configs` - Model configurations
+- `analytics` - Newsletter performance metrics
+
+**Troubleshooting:**
+- "relation does not exist" → Run migration SQL
+- Connection failed → Check `.env` has correct URL/key
+- Vector search not working → Enable pgvector extension
+
+## Pending Implementation
+
+- Embedding generation and storage (vector search)
+- Enhanced topic prioritization with database
+- Phoenix evaluation integration
+- Model comparison UI
+- Cost tracking dashboard
 
 ## License
 
-MIT License - see LICENSE file for details
-
-## Next Steps
-
-See the plan file for detailed implementation roadmap.
-
+MIT License
